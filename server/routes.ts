@@ -15,14 +15,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Students API
   app.get("/api/students", async (req, res, next) => {
     try {
-      console.log("GET /api/students - Session ID:", req.sessionID);
-      console.log("GET /api/students - Is authenticated:", req.isAuthenticated());
-      console.log("GET /api/students - User:", req.user);
-      
-      if (!req.isAuthenticated()) {
-        console.log("Sending 401 - Not authenticated");
-        return res.sendStatus(401);
-      }
+      console.log("GET /api/students - No authentication required");
       
       let students;
       if (req.query.class) {
@@ -39,7 +32,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/students/:id", async (req, res, next) => {
     try {
-      if (!req.isAuthenticated()) return res.sendStatus(401);
+      console.log("GET /api/students/:id - No authentication required");
       
       const student = await storage.getStudent(parseInt(req.params.id));
       if (!student) {
@@ -53,7 +46,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/students", async (req, res, next) => {
     try {
-      if (!req.isAuthenticated()) return res.sendStatus(401);
+      console.log("POST /api/students - No authentication required");
       
       // Validate request body
       const parsedData = insertStudentSchema.safeParse(req.body);
@@ -76,7 +69,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/students/:id", async (req, res, next) => {
     try {
-      if (!req.isAuthenticated()) return res.sendStatus(401);
+      console.log("PATCH /api/students/:id - No authentication required");
       
       const student = await storage.getStudent(parseInt(req.params.id));
       if (!student) {
@@ -93,7 +86,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Grades API
   app.get("/api/grades", async (req, res, next) => {
     try {
-      if (!req.isAuthenticated()) return res.sendStatus(401);
+      console.log("GET /api/grades - No authentication required");
       
       // Filter by student, subject, and experiment if provided
       const studentId = req.query.studentId ? parseInt(req.query.studentId as string) : undefined;
@@ -136,7 +129,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/grades", async (req, res, next) => {
     try {
-      if (!req.isAuthenticated()) return res.sendStatus(401);
+      console.log("POST /api/grades - No authentication required");
       
       // Validate request body
       const parsedData = extendedInsertGradeSchema.safeParse(req.body);
@@ -173,7 +166,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/grades/:id", async (req, res, next) => {
     try {
-      if (!req.isAuthenticated()) return res.sendStatus(401);
+      console.log("PATCH /api/grades/:id - No authentication required");
       
       const grade = await storage.getGrade(parseInt(req.params.id));
       if (!grade) {
@@ -190,7 +183,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Reports API
   app.get("/api/reports/student/:id", async (req, res, next) => {
     try {
-      if (!req.isAuthenticated()) return res.sendStatus(401);
+      console.log("GET /api/reports/student/:id - No authentication required");
       
       const studentId = parseInt(req.params.id);
       const student = await storage.getStudent(studentId);

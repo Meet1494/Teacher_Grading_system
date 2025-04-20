@@ -15,7 +15,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Students API
   app.get("/api/students", async (req, res, next) => {
     try {
-      if (!req.isAuthenticated()) return res.sendStatus(401);
+      console.log("GET /api/students - Session ID:", req.sessionID);
+      console.log("GET /api/students - Is authenticated:", req.isAuthenticated());
+      console.log("GET /api/students - User:", req.user);
+      
+      if (!req.isAuthenticated()) {
+        console.log("Sending 401 - Not authenticated");
+        return res.sendStatus(401);
+      }
       
       let students;
       if (req.query.class) {
@@ -25,6 +32,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       res.json(students);
     } catch (error) {
+      console.error("Error in GET /api/students:", error);
       next(error);
     }
   });

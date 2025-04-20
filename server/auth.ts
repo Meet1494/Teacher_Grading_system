@@ -29,23 +29,37 @@ async function comparePasswords(supplied: string, stored: string) {
 }
 
 export function setupAuth(app: Express) {
+  if (!process.env.SESSION_SECRET) {
+    console.warn("WARNING: No SESSION_SECRET environment variable set! Using a default secret.");
+  }
+  
   const sessionSettings: session.SessionOptions = {
     secret: process.env.SESSION_SECRET || "teacher-grading-system-secret",
     resave: true,
     saveUninitialized: true,
     store: storage.sessionStore,
+    name: 'teacher-grade-app.sid', // custom name helps identify our app's cookies
     cookie: {
-      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
       httpOnly: true,
-      secure: false, // Set to false for development
-      sameSite: 'lax'
+      secure: false, // set to false for development
+      sameSite: 'lax',
+      path: '/'
     }
   };
 
   app.set("trust proxy", 1);
+  
+  // Set up session middleware
   app.use(session(sessionSettings));
+  
+  // Initialize Passport and restore authentication state from session
   app.use(passport.initialize());
   app.use(passport.session());
+  
+  // Log session setup for debugging
+  console.log("Auth setup complete with session store:", 
+    storage.sessionStore ? "PostgreSQL session store" : "No session store");
 
   passport.use(
     new LocalStrategy(async (username, password, done) => {
@@ -86,6 +100,9 @@ export function setupAuth(app: Express) {
   });
 
   app.post("/api/login", passport.authenticate("local"), (req, res) => {
+    console.log("Login successful, user:", req.user);
+    console.log("Session ID:", req.sessionID);
+    console.log("Is authenticated:", req.isAuthenticated());
     res.status(200).json(req.user);
   });
 
@@ -97,7 +114,15 @@ export function setupAuth(app: Express) {
   });
 
   app.get("/api/user", (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
+    console.log("GET /api/user - Session ID:", req.sessionID);
+    console.log("GET /api/user - Is authenticated:", req.isAuthenticated());
+    
+    if (!req.isAuthenticated()) {
+      console.log("GET /api/user - Not authenticated, sending 401");
+      return res.sendStatus(401);
+    }
+    
+    console.log("GET /api/user - User:", req.user);
     res.json(req.user);
   });
 }

@@ -12,12 +12,23 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
+  // For debugging
+  console.log(`Making ${method} request to ${url}`);
+  
   const res = await fetch(url, {
     method,
-    headers: data ? { "Content-Type": "application/json" } : {},
+    headers: {
+      ...(data ? { "Content-Type": "application/json" } : {}),
+      'Accept': 'application/json',
+      'Cache-Control': 'no-cache'
+    },
     body: data ? JSON.stringify(data) : undefined,
-    credentials: "include",
+    credentials: "include", // Always include credentials for cookie-based auth
   });
+
+  if (method === 'POST' && (url === '/api/login' || url === '/api/register')) {
+    console.log('Auth response status:', res.status);
+  }
 
   await throwIfResNotOk(res);
   return res;
@@ -29,11 +40,20 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
+    console.log(`Fetching data from ${queryKey[0]}`);
+    
     const res = await fetch(queryKey[0] as string, {
       credentials: "include",
+      headers: {
+        'Accept': 'application/json',
+        'Cache-Control': 'no-cache'
+      }
     });
+    
+    console.log(`Response status from ${queryKey[0]}: ${res.status}`);
 
     if (unauthorizedBehavior === "returnNull" && res.status === 401) {
+      console.log(`Returning null for unauthorized request to ${queryKey[0]}`);
       return null;
     }
 

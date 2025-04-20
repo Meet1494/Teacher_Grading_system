@@ -4,29 +4,36 @@ import {
   useMutation,
   UseMutationResult,
 } from "@tanstack/react-query";
-import { insertTeacherSchema, Teacher as SelectTeacher, InsertTeacher } from "@shared/schema";
+import { insertTeacherSchema, Teacher } from "@shared/schema";
 import { getQueryFn, apiRequest, queryClient } from "../lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { z } from "zod";
 
 type AuthContextType = {
-  user: SelectTeacher | null;
+  user: Teacher | null;
   isLoading: boolean;
   error: Error | null;
-  loginMutation: UseMutationResult<SelectTeacher, Error, LoginData>;
+  loginMutation: UseMutationResult<Teacher, Error, LoginData>;
   logoutMutation: UseMutationResult<void, Error, void>;
-  registerMutation: UseMutationResult<SelectTeacher, Error, InsertTeacher>;
+  registerMutation: UseMutationResult<Teacher, Error, RegisterData>;
 };
 
-type LoginData = Pick<InsertTeacher, "username" | "password">;
+type LoginData = {
+  username: string;
+  password: string;
+};
+
+type RegisterData = z.infer<typeof insertTeacherSchema>;
 
 export const AuthContext = createContext<AuthContextType | null>(null);
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
   const {
     data: user,
     error,
     isLoading,
-  } = useQuery<SelectTeacher | undefined, Error>({
+  } = useQuery<Teacher | undefined, Error>({
     queryKey: ["/api/user"],
     queryFn: getQueryFn({ on401: "returnNull" }),
   });
@@ -36,7 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const res = await apiRequest("POST", "/api/login", credentials);
       return await res.json();
     },
-    onSuccess: (user: SelectTeacher) => {
+    onSuccess: (user: Teacher) => {
       queryClient.setQueryData(["/api/user"], user);
       toast({
         title: "Login successful",
@@ -46,18 +53,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     onError: (error: Error) => {
       toast({
         title: "Login failed",
-        description: error.message,
+        description: error.message || "Invalid username or password",
         variant: "destructive",
       });
     },
   });
 
   const registerMutation = useMutation({
-    mutationFn: async (credentials: InsertTeacher) => {
+    mutationFn: async (credentials: RegisterData) => {
       const res = await apiRequest("POST", "/api/register", credentials);
       return await res.json();
     },
-    onSuccess: (user: SelectTeacher) => {
+    onSuccess: (user: Teacher) => {
       queryClient.setQueryData(["/api/user"], user);
       toast({
         title: "Registration successful",
@@ -67,7 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     onError: (error: Error) => {
       toast({
         title: "Registration failed",
-        description: error.message,
+        description: error.message || "Could not register your account",
         variant: "destructive",
       });
     },
@@ -80,8 +87,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     onSuccess: () => {
       queryClient.setQueryData(["/api/user"], null);
       toast({
-        title: "Logout successful",
-        description: "You have been logged out successfully.",
+        title: "Logged out",
+        description: "You have been logged out successfully",
       });
     },
     onError: (error: Error) => {

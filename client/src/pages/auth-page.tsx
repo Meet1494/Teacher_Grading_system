@@ -1,28 +1,28 @@
-import { useState, useEffect } from "react";
-import { useAuth } from "@/hooks/use-auth";
+import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { insertTeacherSchema } from "@shared/schema";
+import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Loader2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-// Login schema
 const loginSchema = z.object({
   username: z.string().min(1, "Username is required"),
   password: z.string().min(1, "Password is required"),
 });
 
-// Registration schema
-const registerSchema = insertTeacherSchema.extend({
-  password: z.string().min(6, "Password must be at least 6 characters"),
+const registerSchema = z.object({
   name: z.string().min(1, "Name is required"),
+  username: z.string().min(3, "Username must be at least 3 characters"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+  confirmPassword: z.string().min(1, "Please confirm your password"),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords do not match",
+  path: ["confirmPassword"],
 });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
@@ -30,17 +30,9 @@ type RegisterFormValues = z.infer<typeof registerSchema>;
 
 export default function AuthPage() {
   const [activeTab, setActiveTab] = useState<string>("login");
+  const [location, navigate] = useLocation();
   const { user, loginMutation, registerMutation } = useAuth();
-  const [, navigate] = useLocation();
-  
-  // Redirect if already logged in
-  useEffect(() => {
-    if (user) {
-      navigate("/");
-    }
-  }, [user, navigate]);
-  
-  // Login form
+
   const loginForm = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
@@ -48,77 +40,44 @@ export default function AuthPage() {
       password: "",
     },
   });
-  
-  // Registration form
+
   const registerForm = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
+      name: "",
       username: "",
       password: "",
-      name: "",
-      department: "",
+      confirmPassword: "",
     },
   });
-  
+
+  useEffect(() => {
+    // Redirect to home if already logged in
+    if (user) {
+      navigate("/");
+    }
+  }, [user, navigate]);
+
   const onLoginSubmit = (data: LoginFormValues) => {
     loginMutation.mutate(data);
   };
-  
+
   const onRegisterSubmit = (data: RegisterFormValues) => {
-    registerMutation.mutate(data);
+    const { confirmPassword, ...registerData } = data;
+    registerMutation.mutate(registerData);
   };
-  
-  if (user) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-  
+
   return (
-    <div className="min-h-screen flex bg-neutral-50">
-      {/* Hero Section */}
-      <div className="hidden md:flex md:w-1/2 bg-primary p-12 text-white flex-col justify-center">
-        <div className="max-w-md mx-auto">
-          <h1 className="text-4xl font-bold mb-6">Experiment Grading System</h1>
-          <p className="text-lg mb-8">
-            A comprehensive platform for teachers to grade students across multiple experiments
-            and generate detailed performance reports.
-          </p>
-          <div className="space-y-4">
-            <div className="flex items-start">
-              <span className="material-icons mr-3 mt-0.5">check_circle</span>
-              <p>Grade students on performance, knowledge, implementation, strategy, and attitude</p>
-            </div>
-            <div className="flex items-start">
-              <span className="material-icons mr-3 mt-0.5">check_circle</span>
-              <p>Support for 5 subjects with 5 experiments each</p>
-            </div>
-            <div className="flex items-start">
-              <span className="material-icons mr-3 mt-0.5">check_circle</span>
-              <p>Generate consolidated reports for each student</p>
-            </div>
-            <div className="flex items-start">
-              <span className="material-icons mr-3 mt-0.5">check_circle</span>
-              <p>Easily manage students across different classes</p>
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      {/* Auth Forms */}
-      <div className="w-full md:w-1/2 flex items-center justify-center p-6">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <CardTitle className="text-2xl">Welcome to the Grading System</CardTitle>
-            <CardDescription>
-              Please sign in or create an account to continue
-            </CardDescription>
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+      <div className="w-full max-w-5xl grid md:grid-cols-2 gap-8 items-center">
+        <Card className="w-full">
+          <CardHeader>
+            <CardTitle className="text-2xl font-bold">Teacher Grading System</CardTitle>
+            <CardDescription>Sign in to your account or create a new one.</CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid grid-cols-2 mb-6">
+            <Tabs defaultValue="login" value={activeTab} onValueChange={setActiveTab}>
+              <TabsList className="grid w-full grid-cols-2 mb-4">
                 <TabsTrigger value="login">Login</TabsTrigger>
                 <TabsTrigger value="register">Register</TabsTrigger>
               </TabsList>
@@ -147,7 +106,7 @@ export default function AuthPage() {
                         <FormItem>
                           <FormLabel>Password</FormLabel>
                           <FormControl>
-                            <Input type="password" placeholder="••••••••" {...field} />
+                            <Input type="password" placeholder="Enter your password" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -156,17 +115,10 @@ export default function AuthPage() {
                     
                     <Button 
                       type="submit" 
-                      className="w-full" 
+                      className="w-full"
                       disabled={loginMutation.isPending}
                     >
-                      {loginMutation.isPending ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Signing in...
-                        </>
-                      ) : (
-                        "Sign In"
-                      )}
+                      {loginMutation.isPending ? "Signing in..." : "Sign In"}
                     </Button>
                   </form>
                 </Form>
@@ -175,6 +127,20 @@ export default function AuthPage() {
               <TabsContent value="register">
                 <Form {...registerForm}>
                   <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)} className="space-y-4">
+                    <FormField
+                      control={registerForm.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Full Name</FormLabel>
+                          <FormControl>
+                            <Input placeholder="John Doe" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
                     <FormField
                       control={registerForm.control}
                       name="username"
@@ -191,40 +157,26 @@ export default function AuthPage() {
                     
                     <FormField
                       control={registerForm.control}
-                      name="name"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Full Name</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Enter your full name" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={registerForm.control}
-                      name="department"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Department</FormLabel>
-                          <FormControl>
-                            <Input placeholder="e.g., Computer Science" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={registerForm.control}
                       name="password"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Password</FormLabel>
                           <FormControl>
-                            <Input type="password" placeholder="Choose a secure password" {...field} />
+                            <Input type="password" placeholder="Create a password" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={registerForm.control}
+                      name="confirmPassword"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Confirm Password</FormLabel>
+                          <FormControl>
+                            <Input type="password" placeholder="Confirm your password" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -233,24 +185,63 @@ export default function AuthPage() {
                     
                     <Button 
                       type="submit" 
-                      className="w-full" 
+                      className="w-full"
                       disabled={registerMutation.isPending}
                     >
-                      {registerMutation.isPending ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Creating account...
-                        </>
-                      ) : (
-                        "Create Account"
-                      )}
+                      {registerMutation.isPending ? "Creating account..." : "Create Account"}
                     </Button>
                   </form>
                 </Form>
               </TabsContent>
             </Tabs>
           </CardContent>
+          <CardFooter className="flex flex-col space-y-2">
+            <div className="text-sm text-center text-gray-500">
+              {activeTab === "login" ? (
+                <span>
+                  Don't have an account?{" "}
+                  <Button 
+                    variant="link" 
+                    className="p-0 h-auto" 
+                    onClick={() => setActiveTab("register")}
+                  >
+                    Register
+                  </Button>
+                </span>
+              ) : (
+                <span>
+                  Already have an account?{" "}
+                  <Button 
+                    variant="link" 
+                    className="p-0 h-auto" 
+                    onClick={() => setActiveTab("login")}
+                  >
+                    Login
+                  </Button>
+                </span>
+              )}
+            </div>
+          </CardFooter>
         </Card>
+        
+        <div className="hidden md:block">
+          <div className="text-center p-6 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg text-white">
+            <h1 className="text-3xl font-bold mb-4">Teacher Grading System</h1>
+            <p className="text-lg mb-6">
+              Streamline your student grading process with our comprehensive system.
+            </p>
+            <ul className="text-left list-disc list-inside space-y-2 mb-6">
+              <li>Grade students across multiple subjects and experiments</li>
+              <li>Track performance, knowledge, implementation, strategy and attitude</li>
+              <li>Generate consolidated reports for each student</li>
+              <li>Easily manage students in different classes</li>
+              <li>Save and export grades in different formats</li>
+            </ul>
+            <p className="text-sm opacity-80 mt-8">
+              The perfect tool for teachers to manage student grades efficiently.
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );

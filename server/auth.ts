@@ -5,11 +5,11 @@ import session from "express-session";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { storage } from "./storage";
-import { Teacher as SelectTeacher } from "@shared/schema";
+import { Teacher } from "@shared/schema";
 
 declare global {
   namespace Express {
-    interface User extends SelectTeacher {}
+    interface User extends Teacher {}
   }
 }
 
@@ -30,12 +30,11 @@ async function comparePasswords(supplied: string, stored: string) {
 
 export function setupAuth(app: Express) {
   const sessionSettings: session.SessionOptions = {
-    secret: process.env.SESSION_SECRET || "grading-system-secret-key",
+    secret: process.env.SESSION_SECRET || "teacher-grading-system-secret",
     resave: false,
     saveUninitialized: false,
     store: storage.sessionStore,
     cookie: {
-      secure: process.env.NODE_ENV === "production",
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
     }
   };
@@ -56,7 +55,7 @@ export function setupAuth(app: Express) {
     }),
   );
 
-  passport.serializeUser((teacher, done) => done(null, teacher.id));
+  passport.serializeUser((user, done) => done(null, user.id));
   passport.deserializeUser(async (id: number, done) => {
     const teacher = await storage.getTeacher(id);
     done(null, teacher);

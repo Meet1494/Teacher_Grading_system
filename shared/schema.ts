@@ -1,97 +1,69 @@
-import { pgTable, text, serial, integer, boolean, timestamp, unique } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// Teacher schema
+// Teachers table
 export const teachers = pgTable("teachers", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
   name: text("name").notNull(),
-  department: text("department"),
 });
 
 export const insertTeacherSchema = createInsertSchema(teachers).pick({
   username: true,
   password: true,
   name: true,
-  department: true,
 });
 
-// Class schema
-export const classes = pgTable("classes", {
-  id: serial("id").primaryKey(),
-  name: text("name").notNull().unique(), // IT1, IT2, IT3, etc.
-});
+// Classes enum
+export const classesEnum = z.enum(["IT1", "IT2", "IT3"]);
 
-export const insertClassSchema = createInsertSchema(classes).pick({
-  name: true,
-});
-
-// Student schema
+// Students table
 export const students = pgTable("students", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
-  sapId: text("sap_id").notNull().unique(),
-  classId: integer("class_id").notNull(),
+  sapId: text("sapId").notNull().unique(),
+  class: text("class").notNull(), // One of "IT1", "IT2", "IT3"
 });
 
 export const insertStudentSchema = createInsertSchema(students).pick({
   name: true,
   sapId: true,
-  classId: true,
+  class: true,
 });
 
-// Subject schema
-export const subjects = pgTable("subjects", {
-  id: serial("id").primaryKey(),
-  code: text("code").notNull().unique(), // FSD, IPCV, ISIG, BDA, SE
-  name: text("name").notNull(),
-});
+// Subjects enum
+export const subjectsEnum = z.enum(["FSD", "IPCV", "ISIG", "BDA", "SE"]);
 
-export const insertSubjectSchema = createInsertSchema(subjects).pick({
-  code: true,
-  name: true,
-});
+// Parameters enum for grading
+export const parametersEnum = z.enum([
+  "performance",
+  "knowledge",
+  "implementation",
+  "strategy",
+  "attitude"
+]);
 
-// Experiment schema
-export const experiments = pgTable("experiments", {
-  id: serial("id").primaryKey(),
-  subjectId: integer("subject_id").notNull(),
-  number: integer("number").notNull(), // 1-5
-  title: text("title").notNull(),
-  description: text("description"),
-});
-
-export const insertExperimentSchema = createInsertSchema(experiments).pick({
-  subjectId: true,
-  number: true,
-  title: true,
-  description: true,
-});
-
-// Grade schema
+// Grades table
 export const grades = pgTable("grades", {
   id: serial("id").primaryKey(),
-  studentId: integer("student_id").notNull(),
-  experimentId: integer("experiment_id").notNull(),
-  performance: integer("performance"), // 0-5
-  knowledge: integer("knowledge"), // 0-5
-  implementation: integer("implementation"), // 0-5
-  strategy: integer("strategy"), // 0-5
-  attitude: integer("attitude"), // 0-5
+  studentId: integer("studentId").notNull(),
+  subject: text("subject").notNull(), // One of FSD, IPCV, ISIG, BDA, SE
+  experimentNumber: integer("experimentNumber").notNull(), // 1 to 5
+  performance: integer("performance").notNull(), // 0 to 5
+  knowledge: integer("knowledge").notNull(), // 0 to 5
+  implementation: integer("implementation").notNull(), // 0 to 5
+  strategy: integer("strategy").notNull(), // 0 to 5
+  attitude: integer("attitude").notNull(), // 0 to 5
   comment: text("comment"),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-}, (table) => {
-  return {
-    unq: unique().on(table.studentId, table.experimentId),
-  };
+  updatedAt: timestamp("updatedAt").notNull(),
 });
 
 export const insertGradeSchema = createInsertSchema(grades).pick({
   studentId: true,
-  experimentId: true,
+  subject: true,
+  experimentNumber: true,
   performance: true,
   knowledge: true,
   implementation: true,
@@ -100,42 +72,26 @@ export const insertGradeSchema = createInsertSchema(grades).pick({
   comment: true,
 });
 
-export const updateGradeSchema = createInsertSchema(grades).pick({
-  performance: true,
-  knowledge: true,
-  implementation: true,
-  strategy: true,
-  attitude: true,
-  comment: true,
+// Add custom validation
+export const extendedInsertGradeSchema = insertGradeSchema.extend({
+  performance: z.number().min(0).max(5),
+  knowledge: z.number().min(0).max(5),
+  implementation: z.number().min(0).max(5),
+  strategy: z.number().min(0).max(5),
+  attitude: z.number().min(0).max(5),
 });
 
 // Types
 export type InsertTeacher = z.infer<typeof insertTeacherSchema>;
 export type Teacher = typeof teachers.$inferSelect;
 
-export type InsertClass = z.infer<typeof insertClassSchema>;
-export type Class = typeof classes.$inferSelect;
-
 export type InsertStudent = z.infer<typeof insertStudentSchema>;
 export type Student = typeof students.$inferSelect;
 
-export type InsertSubject = z.infer<typeof insertSubjectSchema>;
-export type Subject = typeof subjects.$inferSelect;
-
-export type InsertExperiment = z.infer<typeof insertExperimentSchema>;
-export type Experiment = typeof experiments.$inferSelect;
-
 export type InsertGrade = z.infer<typeof insertGradeSchema>;
-export type UpdateGrade = z.infer<typeof updateGradeSchema>;
 export type Grade = typeof grades.$inferSelect;
 
-// Extended types for frontend use
-export type StudentWithClass = Student & { className: string };
-export type ExperimentWithSubject = Experiment & { subjectCode: string, subjectName: string };
-export type GradeWithDetails = Grade & { 
-  studentName: string, 
-  studentSapId: string, 
-  experimentTitle: string,
-  experimentNumber: number,
-  subjectCode: string
-};
+// Custom types for API responses
+export type GradeWithTotal = Grade & { total: number };
+export type StudentWithGrades = Student & { grades: GradeWithTotal };
+export type SubjectExperiment = { subject: string, experimentNumber: number };

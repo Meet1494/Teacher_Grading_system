@@ -28,40 +28,44 @@ export default function Reports() {
   const [selectedClass, setSelectedClass] = useState<string>("all");
 
   // Fetch all students
-  const { data: allStudents, isLoading: loadingStudents } = useQuery({
+  const { data: allStudents, isLoading: loadingStudents } = useQuery<any[]>({
     queryKey: ['/api/students'],
   });
 
   // Filter students by search and class
-  const filteredStudents = allStudents
+  const filteredStudents = allStudents && Array.isArray(allStudents)
     ? allStudents.filter(
-        (student) =>
+        (student: any) =>
           (selectedClass === "all" || student.class === selectedClass) &&
           (student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
             student.sapId.toLowerCase().includes(searchQuery.toLowerCase()))
       )
     : [];
 
-  // Fetch student report data
+  // Fetch all student reports data
   const {
-    data: studentReport,
-    isLoading: loadingReport,
-    isError: reportError,
-  } = useQuery({
-    queryKey: ['/api/reports/student', selectedStudent],
-    enabled: selectedStudent !== null,
+    data: allReports,
+    isLoading: loadingAllReports,
+    isError: allReportsError,
+  } = useQuery<any[]>({
+    queryKey: ['/api/reports/student'],
   });
+  
+  // Get the selected student report from the all reports data
+  const studentReport = selectedStudent && allReports
+    ? allReports.find(report => report.student.id === selectedStudent)
+    : null;
 
   // Calculate averages by subject
   const subjectAverages = studentReport?.grades
     ? Object.values(subjectsEnum.enum).map((subject) => {
         const subjectGrades = studentReport.grades.filter(
-          (grade) => grade.subject === subject
+          (grade: any) => grade.subject === subject
         );
         
         if (subjectGrades.length === 0) return { subject, average: 0 };
         
-        const totalScore = subjectGrades.reduce((acc, grade) => acc + grade.total, 0);
+        const totalScore = subjectGrades.reduce((acc: number, grade: any) => acc + grade.total, 0);
         return {
           subject, 
           average: totalScore / subjectGrades.length
@@ -73,7 +77,7 @@ export default function Reports() {
   const parameterBreakdown = studentReport?.grades
     ? ["performance", "knowledge", "implementation", "strategy", "attitude"].map(param => {
         const totalScore = studentReport.grades.reduce(
-          (acc, grade) => acc + grade[param as keyof typeof grade] as number, 
+          (acc: number, grade: any) => acc + grade[param as keyof typeof grade] as number, 
           0
         );
         return {
@@ -261,12 +265,12 @@ export default function Reports() {
                     <FileText className="h-16 w-16 text-gray-300" />
                     <p className="text-gray-500">Please select a student from the list to view their report</p>
                   </div>
-                ) : loadingReport ? (
+                ) : loadingAllReports ? (
                   <div className="flex justify-center items-center h-96">
                     <Loader2 className="h-8 w-8 animate-spin text-primary" />
                     <span className="ml-2 text-gray-600">Loading report...</span>
                   </div>
-                ) : reportError ? (
+                ) : allReportsError ? (
                   <div className="text-center py-8 text-red-500">
                     Error loading report. Please try again.
                   </div>

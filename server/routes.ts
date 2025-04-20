@@ -192,6 +192,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Reports API
+  
+  // Get report for all students (for the reports page)
+  app.get("/api/reports/student", async (req, res, next) => {
+    try {
+      console.log("GET /api/reports/student - No authentication required");
+      
+      // Get all students
+      const students = await storage.getAllStudents();
+      
+      if (!students || students.length === 0) {
+        return res.json({ students: [], reports: [] });
+      }
+      
+      // Fetch all reports for each student
+      const reports = await Promise.all(
+        students.map(async (student) => {
+          const grades = await storage.getGradesByStudentId(student.id);
+          
+          // Add total score to each grade
+          const gradesWithTotal = grades.map(grade => {
+            const total = grade.performance + grade.knowledge + 
+              grade.implementation + grade.strategy + 
+              grade.attitude;
+            return { ...grade, total };
+          });
+          
+          return {
+            student,
+            grades: gradesWithTotal
+          };
+        })
+      );
+      
+      res.json(reports);
+    } catch (error) {
+      console.error("Error fetching all student reports:", error);
+      next(error);
+    }
+  });
+  
+  // Get report for a specific student
   app.get("/api/reports/student/:id", async (req, res, next) => {
     try {
       console.log("GET /api/reports/student/:id - No authentication required");

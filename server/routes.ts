@@ -87,6 +87,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/grades", async (req, res, next) => {
     try {
       console.log("GET /api/grades - No authentication required");
+      console.log("Query parameters:", req.query);
       
       // Filter by student, subject, and experiment if provided
       const studentId = req.query.studentId ? parseInt(req.query.studentId as string) : undefined;
@@ -96,7 +97,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         : undefined;
 
       let grades = [];
+      
       if (studentId && subject && experimentNumber) {
+        // Get grade for specific student, subject and experiment
         const grade = await storage.getGradeByStudentAndExperiment(
           studentId, 
           subject, 
@@ -104,13 +107,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         );
         grades = grade ? [grade] : [];
       } else if (studentId && subject) {
+        // Get all grades for student in a subject
         grades = await storage.getGradesByStudentIdAndSubject(studentId, subject);
       } else if (subject && experimentNumber) {
+        // Get all grades for a subject and experiment (what the grading sheet page needs)
         grades = await storage.getGradesBySubjectAndExperiment(subject, experimentNumber);
       } else if (studentId) {
+        // Get all grades for a student
         grades = await storage.getGradesByStudentId(studentId);
       } else {
-        return res.status(400).json({ message: "Missing required query parameters" });
+        // If no filter provided, return empty array instead of error
+        // This helps the UI not break when initially loading
+        console.log("No query parameters provided for grades - returning empty array");
+        return res.json([]);
       }
 
       // Add total score to each grade
@@ -121,8 +130,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return { ...grade, total };
       });
 
+      console.log(`Returning ${gradesWithTotal.length} grades`);
       res.json(gradesWithTotal);
     } catch (error) {
+      console.error("Error in GET /api/grades:", error);
       next(error);
     }
   });

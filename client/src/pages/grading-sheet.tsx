@@ -34,7 +34,7 @@ export default function GradingSheet() {
     data: students,
     isLoading: loadingStudents,
     isError: studentsError,
-  } = useQuery({
+  } = useQuery<Student[]>({
     queryKey: ['/api/students', { class: selectedClass }],
     enabled: !!selectedClass,
   });
@@ -44,20 +44,23 @@ export default function GradingSheet() {
     data: gradesData,
     isLoading: loadingGrades,
     isError: gradesError
-  } = useQuery({
-    queryKey: ['/api/grades', { subject, experimentNumber: experiment }],
+  } = useQuery<Grade[]>({
+    queryKey: ['/api/grades', { 
+      subject: subject, 
+      experimentNumber: experiment 
+    }],
     enabled: !!subject && !!experiment,
   });
   
   // Filter students by search query
-  const filteredStudents = students?.filter(student => 
+  const filteredStudents = (students || []).filter((student: Student) => 
     student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     student.sapId.toLowerCase().includes(searchQuery.toLowerCase())
-  ) || [];
+  );
   
   // Organize grades by student ID
   const gradesByStudent: Record<number, Grade> = {};
-  if (gradesData) {
+  if (gradesData && Array.isArray(gradesData)) {
     gradesData.forEach((grade: Grade) => {
       gradesByStudent[grade.studentId] = grade;
     });
@@ -81,7 +84,7 @@ export default function GradingSheet() {
       // Create CSV content
       let csvContent = "Name,SAP ID,Performance,Knowledge,Implementation,Strategy,Attitude,Total,Comments\n";
       
-      filteredStudents.forEach(student => {
+      filteredStudents.forEach((student: Student) => {
         const grade = gradesByStudent[student.id];
         const total = grade 
           ? grade.performance + grade.knowledge + grade.implementation + grade.strategy + grade.attitude

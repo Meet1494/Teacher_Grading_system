@@ -40,9 +40,29 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    console.log(`Fetching data from ${queryKey[0]}`);
+    const url = queryKey[0] as string;
+    let fullUrl = url;
     
-    const res = await fetch(queryKey[0] as string, {
+    // Check if there are query parameters to add
+    if (queryKey.length > 1 && typeof queryKey[1] === 'object') {
+      const params = new URLSearchParams();
+      const queryParams = queryKey[1] as Record<string, any>;
+      
+      Object.entries(queryParams).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          params.append(key, String(value));
+        }
+      });
+      
+      const queryString = params.toString();
+      if (queryString) {
+        fullUrl = `${url}?${queryString}`;
+      }
+    }
+    
+    console.log(`Fetching data from ${url} with full URL: ${fullUrl}`);
+    
+    const res = await fetch(fullUrl, {
       credentials: "include",
       headers: {
         'Accept': 'application/json',
@@ -50,10 +70,10 @@ export const getQueryFn: <T>(options: {
       }
     });
     
-    console.log(`Response status from ${queryKey[0]}: ${res.status}`);
+    console.log(`Response status from ${url}: ${res.status}`);
 
     if (unauthorizedBehavior === "returnNull" && res.status === 401) {
-      console.log(`Returning null for unauthorized request to ${queryKey[0]}`);
+      console.log(`Returning null for unauthorized request to ${url}`);
       return null;
     }
 

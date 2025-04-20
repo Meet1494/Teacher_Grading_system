@@ -281,54 +281,75 @@ export default function Reports() {
                   </div>
                 ) : (
                   <div className="space-y-6">
-                    {/* Charts */}
-                    <div className="grid md:grid-cols-2 gap-6">
-                      {/* Subject Averages */}
-                      <Card>
-                        <CardHeader className="pb-2">
-                          <CardTitle className="text-sm">Subject Averages</CardTitle>
-                        </CardHeader>
-                        <CardContent className="h-64">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={subjectAverages}>
-                              <CartesianGrid strokeDasharray="3 3" />
-                              <XAxis dataKey="subject" />
-                              <YAxis domain={[0, 25]} />
-                              <Tooltip />
-                              <Bar dataKey="average" fill="hsl(var(--primary))" name="Average Score" />
-                            </BarChart>
-                          </ResponsiveContainer>
-                        </CardContent>
-                      </Card>
-
-                      {/* Parameter Breakdown */}
-                      <Card>
-                        <CardHeader className="pb-2">
-                          <CardTitle className="text-sm">Parameter Breakdown</CardTitle>
-                        </CardHeader>
-                        <CardContent className="h-64">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                              <Pie
-                                data={parameterBreakdown}
-                                cx="50%"
-                                cy="50%"
-                                outerRadius={80}
-                                fill="#8884d8"
-                                dataKey="value"
-                                label={({ name }) => name}
-                              >
-                                {parameterBreakdown.map((entry, index) => (
-                                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                ))}
-                              </Pie>
-                              <Tooltip />
-                              <Legend />
-                            </PieChart>
-                          </ResponsiveContainer>
-                        </CardContent>
-                      </Card>
-                    </div>
+                    {/* Summary Table */}
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm">Subject Performance Summary</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="border rounded-md overflow-hidden">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>Subject</TableHead>
+                                <TableHead className="text-center">Total Experiments</TableHead>
+                                <TableHead className="text-center">Average Score</TableHead>
+                                <TableHead className="text-center">Percentage</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {Object.values(subjectsEnum.enum).map((subject) => {
+                                const subjectGrades = studentReport.grades.filter(
+                                  (grade: any) => grade.subject === subject
+                                );
+                                
+                                const totalExperiments = subjectGrades.length;
+                                
+                                if (totalExperiments === 0) {
+                                  return (
+                                    <TableRow key={subject}>
+                                      <TableCell className="font-medium">{subject}</TableCell>
+                                      <TableCell className="text-center">0</TableCell>
+                                      <TableCell className="text-center">-</TableCell>
+                                      <TableCell className="text-center">-</TableCell>
+                                    </TableRow>
+                                  );
+                                }
+                                
+                                const totalScore = subjectGrades.reduce(
+                                  (acc: number, grade: any) => acc + grade.total, 0
+                                );
+                                const averageScore = totalScore / totalExperiments;
+                                const percentage = (averageScore / 25) * 100; // 25 is max score
+                                
+                                return (
+                                  <TableRow key={subject}>
+                                    <TableCell className="font-medium">{subject}</TableCell>
+                                    <TableCell className="text-center">{totalExperiments}</TableCell>
+                                    <TableCell className="text-center">{averageScore.toFixed(1)}</TableCell>
+                                    <TableCell className="text-center">{percentage.toFixed(1)}%</TableCell>
+                                  </TableRow>
+                                );
+                              })}
+                              
+                              {/* Overall Summary */}
+                              {studentReport.grades.length > 0 && (
+                                <TableRow className="bg-muted/50">
+                                  <TableCell className="font-bold">Overall</TableCell>
+                                  <TableCell className="text-center font-medium">{studentReport.grades.length}</TableCell>
+                                  <TableCell className="text-center font-medium">
+                                    {(studentReport.grades.reduce((acc: number, grade: any) => acc + grade.total, 0) / studentReport.grades.length).toFixed(1)}
+                                  </TableCell>
+                                  <TableCell className="text-center font-medium">
+                                    {((studentReport.grades.reduce((acc: number, grade: any) => acc + grade.total, 0) / studentReport.grades.length) / 25 * 100).toFixed(1)}%
+                                  </TableCell>
+                                </TableRow>
+                              )}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      </CardContent>
+                    </Card>
 
                     {/* Detailed Grades Table */}
                     <Card>

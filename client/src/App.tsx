@@ -14,7 +14,8 @@ function App() {
     <TooltipProvider>
       <Toaster />
       <Switch>
-        <ProtectedRoute path="/" component={Dashboard} />
+        <ProtectedRoute path="/" component={AuthPage} />
+        <ProtectedRoute path="/dashboard" component={Dashboard} />
         <ProtectedRoute path="/grade/:subject/:experiment/:class" component={GradingSheet} />
         <ProtectedRoute path="/students" component={ManageStudents} />
         <ProtectedRoute path="/reports" component={Reports} />

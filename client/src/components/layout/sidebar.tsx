@@ -6,6 +6,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { navigate } from "wouter/use-browser-location";
 
 type SubjectConfig = {
   name: string;
@@ -44,6 +45,7 @@ export function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => v
 
   const handleLogout = () => {
     logoutMutation.mutate();
+    navigate("/");
   };
 
   const sidebarClasses = `fixed inset-y-0 left-0 w-64 bg-white shadow-lg z-30 transition-transform md:relative
